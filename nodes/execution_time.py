@@ -16,7 +16,7 @@ CSV_PATH
 CSV_DIR= "/workspace/tmp/csv"
 os.makedirs(CSV_DIR, exist_ok=True)
 SAVE_TO_CSV=True
-DEBUG_MODE=False # true 會印詳細錯誤訊息
+DEBUG_MODE=True # true 會印詳細錯誤訊息
 QUEUE_REMAINING=1 # 0 表示全部結束才算 workflow 結束
 class ExecutionTime:
     CATEGORY = "PF/Debug"
@@ -312,8 +312,8 @@ async def swizzle_execute(
             "status": "",
             "node_time": 0,
             "relative_time":  0,
-            "vram_gb_peak": (_BASELINE["vram"] / 1024),
-            "ram_gb_peak":  (_BASELINE["ram"] / 1024),
+            "vram_gb_peak": round((_BASELINE["vram"] / 1024),2),
+            "ram_gb_peak":  round((_BASELINE["ram"] / 1024),2),
             "node_vram": 0,
             "node_ram": 0
         }
