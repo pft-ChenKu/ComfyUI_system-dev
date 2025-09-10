@@ -16,7 +16,7 @@ CSV_PATH
 CSV_DIR= "/workspace/tmp/csv"
 os.makedirs(CSV_DIR, exist_ok=True)
 SAVE_TO_CSV=True
-DEBUG_MODE=True # true 會印詳細錯誤訊息
+DEBUG_MODE=False # true 會印詳細錯誤訊息
 QUEUE_REMAINING=1 # 0 表示全部結束才算 workflow 結束
 class ExecutionTime:
     CATEGORY = "PF/Debug"
@@ -83,12 +83,12 @@ def _finish_workflow(pid: str):
                 "node_id": 0,
                 "class_type": "SUMMARY",
                 "status": "FINISHED",
-                "time_sec": 0,
+                "node_time": 0,
                 "relative_time": f"total:{total:.2f}, comfy_align:{total2:.2f}",
                 "vram_gb_peak": max_vram,
                 "ram_gb_peak": max_ram,
-                "vram_diff": 0,
-                "ram_diff": 0,
+                "node_vram": 0,
+                "node_ram": 0,
             }
             df.loc[len(df)] = summary
 
@@ -310,12 +310,12 @@ async def swizzle_execute(
             "node_id": 0,
             "class_type": "START_WORKFLOW",
             "status": "",
-            "time_sec": 0,
+            "node_time": 0,
             "relative_time":  0,
             "vram_gb_peak": (_BASELINE["vram"] / 1024),
             "ram_gb_peak":  (_BASELINE["ram"] / 1024),
-            "vram_diff": 0,
-            "ram_diff": 0
+            "node_vram": 0,
+            "node_ram": 0
         }
         PROMPT_METRICS.append(row)
         
@@ -362,7 +362,7 @@ def log_data(k, node_id, class_type, prompt_id, status):
     if p:
         t1 = time.perf_counter()
         data = p.stop()
-        data["time_sec"] = round(t1 - t0, 2)
+        data["node_time"] = round(t1 - t0, 2)
         data["relative_time"] = round(t1 - _WORKFLOW_T0, 2)
 
         # MB → GB 換算
@@ -378,10 +378,10 @@ def log_data(k, node_id, class_type, prompt_id, status):
         data["ram_delta_from_baseline"] = round(ram_delta_gb, 2)
 
         # 計算相對上一個 node
-        data["vram_diff"] = round(
+        data["node_vram"] = round(
             vram_delta_gb - _LAST_METRICS["vram_delta_from_baseline"], 2
         )
-        data["ram_diff"] = round(
+        data["node_ram"] = round(
             ram_delta_gb - _LAST_METRICS["ram_delta_from_baseline"], 2
         )
 
@@ -397,12 +397,12 @@ def log_data(k, node_id, class_type, prompt_id, status):
             "node_id": node_id,
             "class_type": class_type,
             "status": status,
-            "time_sec": round(data["time_sec"],2),
+            "node_time": round(data["node_time"],2),
             "relative_time":  round(data["relative_time"],2),
             "vram_gb_peak": round(vram_gb,2),
             "ram_gb_peak":  round(ram_gb,2),
-            "vram_diff": round(data["vram_diff"],2),
-            "ram_diff":  round(data["ram_diff"],2)
+            "node_vram": round(data["node_vram"],2),
+            "node_ram":  round(data["node_ram"],2)
         }
         data['prompt_id']=prompt_id
         PROMPT_METRICS.append(row)
