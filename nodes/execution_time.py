@@ -16,8 +16,7 @@ CSV_PATH
 CSV_DIR= "/workspace/tmp/csv"
 os.makedirs(CSV_DIR, exist_ok=True)
 SAVE_TO_CSV=True
-DEBUG_MODE=True # true 會印詳細錯誤訊息
-QUEUE_REMAINING=1 # 0 表示全部結束才算 workflow 結束
+DEBUG_MODE=False # true 會印詳細錯誤訊息
 class ExecutionTime:
     CATEGORY = "PF/Debug"
 
@@ -146,19 +145,17 @@ def _pid_tree(p: psutil.Process, recursive=True):
 
 
 # ---- Getter fallback ----
-def _get_nvml_procs(handle):
-    getters = []
+def _get_nvml_proc_getter():
+    # 優先選 v3（有些欄位較完整），找不到再退而求其次
     for base in ["Compute", "Graphics"]:
-        for suffix in ["_v3", ""]:  # 先試 v3，不行退回 v2
+        for suffix in ["_v3", ""]:
             name = f"nvmlDeviceGet{base}RunningProcesses{suffix}"
             if hasattr(pynvml, name):
-                getters.append(getattr(pynvml, name))
-    return getters
-
+                return getattr(pynvml, name)
+    return None
 
 # ---- VRAM / RAM 量測 ----
 def get_pid_tree_vram_mb(pid: int) -> int:
-    """回傳 pid + 子進程 在所有 GPU 的 VRAM 使用量總和（MiB）。"""
     _nvml_init_once()
     try:
         plist = _pid_tree(psutil.Process(pid))
@@ -167,21 +164,23 @@ def get_pid_tree_vram_mb(pid: int) -> int:
         pids = {pid}
 
     total = 0
+    getter = _get_nvml_proc_getter()
+    if getter is None:
+        return 0
+
     count = pynvml.nvmlDeviceGetCount()
     for i in range(count):
         h = pynvml.nvmlDeviceGetHandleByIndex(i)
-        for getter in _get_nvml_procs(h):
-            try:
-                procs = getter(h)
-            except pynvml.NVMLError:
-                continue
-            for pr in procs:
-                used = getattr(pr, "usedGpuMemory", None) or getattr(
-                    pr, "gpuInstanceMemoryUsed", None
-                )
-                if pr.pid in pids and used and used > 0:
-                    total += int(used // (1024**2))
+        try:
+            procs = getter(h)
+        except pynvml.NVMLError:
+            continue
+        for pr in procs:
+            used = getattr(pr, "usedGpuMemory", None) or getattr(pr, "gpuInstanceMemoryUsed", None)
+            if pr.pid in pids and used and used > 0:
+                total += int(used // (1024**2))
     return total
+
 
 
 def get_pid_tree_rss_mb(pid: int) -> float:
