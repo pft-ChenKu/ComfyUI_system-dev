@@ -28,8 +28,8 @@ class PromptState:
 # 取代原本的一堆 global
 _PROMPTS: Dict[str, PromptState] = {}
 
-SAVE_TO_CSV = True
-CONSOLE_LOG = True  # true 會印詳細錯誤訊息
+SAVE_TO_CSV = False
+CONSOLE_LOG = False  # true 會印詳細錯誤訊息
 FILEPATH = "/workspace/tmp/csv/0.csv"
 FORCED_EMPTY_CACHE = False
 # 每個 prompt_id 的開始時間（與 comfy 的 prompt_worker 相同起點）
@@ -213,6 +213,8 @@ async def swizzle_execute(
 
 def log_data(k, node_id, class_type, prompt_id, status):
     st = _PROMPTS.get(prompt_id)
+    if st is None:
+        return
     p, t0 = st.active.pop(node_id, (None, None))
     if p:
         t1 = time.perf_counter()
