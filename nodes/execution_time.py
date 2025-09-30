@@ -98,20 +98,30 @@ def _finish_workflow(pid: str):
             df.loc[len(df)] = summary
 
             if SAVE_TO_CSV and FILEPATH:
-                # 避免阻塞主執行緒：背景寫檔（可改成同步 if 你想簡單）
-                threading.Thread(
-                    target=lambda: df.to_csv(FILEPATH, index=False, encoding="utf-8"),
-                    daemon=True,
-                ).start()
-
-        # 清理
-        _PROMPTS.clear()
+                _safe_write_csv(df, FILEPATH)  # 見下個片段
+            
 
     except Exception as e:
         logging.warning(f"finish_workflow error: {e}")
+    finally:
+        for p, _ in st.active.values():
+            try:
+                p.stop()
+            except:
+                pass
+        gc.collect()
 
 
-
+def _safe_write_csv(df: pd.DataFrame, path: str):
+    if not path.endswith(".csv"):
+        logging.error("Not correct path!")
+        return
+    dirpath = os.path.dirname(path)
+    if dirpath:
+        os.makedirs(dirpath, exist_ok=True)
+    tmp = f"{path}.tmp"
+    df.to_csv(tmp, index=False, encoding="utf-8")
+    os.replace(tmp, path)
 
 def _execute_patch(self, prompt, prompt_id, extra_data, execute_outputs):
     global _PROMPT_T0, _CURRENT_PROMPT_ID
@@ -126,7 +136,7 @@ def _execute_patch(self, prompt, prompt_id, extra_data, execute_outputs):
 
 
 async def swizzle_execute(
-    server,
+    srv,
     dynprompt,
     caches,
     current_item,
@@ -173,7 +183,7 @@ async def swizzle_execute(
 
     try:
         result = await ORIGIN_EXEC(
-            server,
+            srv,
             dynprompt,
             caches,
             current_item,
@@ -218,8 +228,8 @@ def log_data(k, node_id, class_type, prompt_id, status):
         vram_peak_gb = data["vram_mb_peak"] / 1024
         ram_peak_gb = data["ram_mb_peak"] / 1024
 
-        data["vram_peak_gb"] = round(vram_peak_gb, 2)
-        data["ram_peak"] = round(ram_peak_gb, 2)
+        # data["vram_peak_gb"] = round(vram_peak_gb, 2)
+        # data["ram_peak"] = round(ram_peak_gb, 2)
 
         ## test inference vram
         data["vram"] = round(vram_peak_gb, 2)
