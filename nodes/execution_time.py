@@ -13,12 +13,8 @@ import pandas as pd
 from ..utils import PeakPoller, get_pid_tree_rss_mb, get_pid_tree_vram_mb
 from collections import defaultdict
 from dataclasses import dataclass, field
-<<<<<<< HEAD
-
-=======
 from datetime import timedelta ,datetime
 import logging
->>>>>>> c345f3c ([WHAT] update new code)
 @dataclass
 class PromptState:
     t0: Optional[float] = None 
@@ -33,16 +29,10 @@ class PromptState:
 # 取代原本的一堆 global
 _PROMPTS: Dict[str, PromptState] = {}
 
-<<<<<<< HEAD
-SAVE_TO_CSV = False
-CONSOLE_LOG = False  # true 會印詳細錯誤訊息
-FILEPATH = "/workspace/tmp/csv/0.csv"
-=======
 SAVE_TO_CSV = True
 CONSOLE_LOG = False  # true 會印詳細錯誤訊息
 FILENAME = ""
 CSV_DIR= "/workspace/tmp/csv"
->>>>>>> c345f3c ([WHAT] update new code)
 FORCED_EMPTY_CACHE = False
 # 每個 prompt_id 的開始時間（與 comfy 的 prompt_worker 相同起點）
 _PROMPT_T0 = {}
@@ -68,11 +58,7 @@ def _send_sync_patch(self, event, data, sid=None):
 
 def _finish_workflow(pid: str):
     """一次性收尾：寫 CSV、加總 summary、清理狀態"""
-<<<<<<< HEAD
-    global CONSOLE_LOG ,FILEPATH ,SAVE_TO_CSV, _PROMPTS
-=======
     global CONSOLE_LOG ,FILENAME ,SAVE_TO_CSV, _PROMPTS,CSV_DIR
->>>>>>> c345f3c ([WHAT] update new code)
     st = _PROMPTS.pop(pid, None)
     if not st:
         return
@@ -112,11 +98,6 @@ def _finish_workflow(pid: str):
                 "ram_peak": max_ram,
             }
             df.loc[len(df)] = summary
-<<<<<<< HEAD
-
-            if SAVE_TO_CSV and FILEPATH:
-                _safe_write_csv(df, FILEPATH)  # 見下個片段
-=======
             #如果filepath是空
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             if FILENAME is "":
@@ -127,7 +108,6 @@ def _finish_workflow(pid: str):
             logging.info(rf"filepath:{filepath}")
             if SAVE_TO_CSV and filepath:
                 _safe_write_csv(df, filepath)  # 見下個片段
->>>>>>> c345f3c ([WHAT] update new code)
             
 
     except Exception as e:
@@ -151,12 +131,8 @@ def _safe_write_csv(df: pd.DataFrame, path: str):
     tmp = f"{path}.tmp"
     df.to_csv(tmp, index=False, encoding="utf-8")
     os.replace(tmp, path)
-<<<<<<< HEAD
-
-=======
     logging.info(f"Saved execution time to {path}")
     
->>>>>>> c345f3c ([WHAT] update new code)
 def _execute_patch(self, prompt, prompt_id, extra_data, execute_outputs):
     global _PROMPT_T0, _CURRENT_PROMPT_ID
     _CURRENT_PROMPT_ID = prompt_id
@@ -180,29 +156,17 @@ async def swizzle_execute(
     execution_list,
     pending_subgraph_results,
     pending_async_nodes,
-<<<<<<< HEAD
-):
-    global _PROMPTS ,CONSOLE_LOG
-    node_id = current_item
-    class_type = dynprompt.get_node(current_item)["class_type"]
-=======
     *args, **kwargs,   # ✅ 加這個
 ):
     global _PROMPTS, CONSOLE_LOG
     node_id = current_item
     class_type = dynprompt.get_node(current_item)["class_type"]
 
->>>>>>> c345f3c ([WHAT] update new code)
     if prompt_id not in _PROMPTS:
         st = PromptState()
         _PROMPTS[prompt_id] = st
     else:
         st = _PROMPTS[prompt_id]
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> c345f3c ([WHAT] update new code)
     if st.workflow_t0 is None:
         if CONSOLE_LOG:
             logging.info(f"Start new workflow: [{prompt_id}] ")
@@ -212,10 +176,6 @@ async def swizzle_execute(
         st.baseline_ram_mb = get_pid_tree_rss_mb(os.getpid())
         st.last_end_vram_mb = st.baseline_vram_mb
         st.last_end_ram_mb  = st.baseline_ram_mb
-<<<<<<< HEAD
-        # START 行
-=======
->>>>>>> c345f3c ([WHAT] update new code)
         st.metrics.append({
             "node_id": 0, "class_type": "START_WORKFLOW", "status": "",
             "node_time": 0, "relative_time": 0,
@@ -224,12 +184,8 @@ async def swizzle_execute(
             "node_end_vram": round(st.baseline_vram_mb/1024, 2),
             "clean_cache": 0,
             "ram_peak": round(st.baseline_ram_mb/1024, 2),
-<<<<<<< HEAD
-        })   
-=======
         })
 
->>>>>>> c345f3c ([WHAT] update new code)
     k = node_id
     if k not in st.active:
         poller = PeakPoller(pid=os.getpid(), interval=0.3, include_children=True)
@@ -248,10 +204,7 @@ async def swizzle_execute(
             execution_list,
             pending_subgraph_results,
             pending_async_nodes,
-<<<<<<< HEAD
-=======
             *args, **kwargs,   # ✅ 也要轉傳出去
->>>>>>> c345f3c ([WHAT] update new code)
         )
     except asyncio.CancelledError:
         log_data(k, node_id, class_type, prompt_id, "interrupted")
@@ -264,14 +217,6 @@ async def swizzle_execute(
     name = getattr(exec_result, "name", None)
     if name == "PENDING":
         return result
-<<<<<<< HEAD
-    status = "success" if name == "SUCCESS" else "failure"
-    log_data(k, node_id, class_type, prompt_id, status)
-
-    return result
-
-
-=======
 
     status = "success" if name == "SUCCESS" else "failure"
     log_data(k, node_id, class_type, prompt_id, status)
@@ -279,7 +224,6 @@ async def swizzle_execute(
 
 
 
->>>>>>> c345f3c ([WHAT] update new code)
 def log_data(k, node_id, class_type, prompt_id, status):
     st = _PROMPTS.get(prompt_id)
     if st is None:
@@ -358,23 +302,15 @@ def FORCE_ENABLE_FIRST():
         execution.PromptExecutor.custom_wc_patched_execute = True
 
 
-<<<<<<< HEAD
-FORCE_ENABLE_FIRST()
-=======
 # FORCE_ENABLE_FIRST()
->>>>>>> c345f3c ([WHAT] update new code)
 
 
 class ExecutionTime:
     CATEGORY = "system/debug"
     INPUT_TYPES = lambda: {
         "required": {
-<<<<<<< HEAD
-            "filepath": ("STRING", {"default": FILEPATH}),
-=======
             "filedir": ("STRING", {"default": CSV_DIR}),
             "filename": ("STRING", {"default": FILENAME,"tooltip":"留空就會依據時間給名稱"}),
->>>>>>> c345f3c ([WHAT] update new code)
             "forced_empty_cache": (
                 "BOOLEAN",
                 {
@@ -401,33 +337,18 @@ class ExecutionTime:
 
     def execute(
         self,
-<<<<<<< HEAD
-        filepath: str,
-=======
         filedir:str,
         filename: str,
->>>>>>> c345f3c ([WHAT] update new code)
         forced_empty_cache: bool,
         console_log: bool,
         enable_node: bool,
         input=None,
     ):
-<<<<<<< HEAD
-        logging.info(rf"Filename:{filepath}")
-        global SAVE_TO_CSV, CONSOLE_LOG, FORCED_EMPTY_CACHE, FILEPATH, _PROMPTS
-        if enable_node:
-            if filepath == "":
-                SAVE_TO_CSV = False
-            else:
-                os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            FILEPATH = filepath
-=======
         
         global SAVE_TO_CSV, CONSOLE_LOG, FORCED_EMPTY_CACHE, FILENAME, _PROMPTS ,CSV_DIR
         CSV_DIR=filedir
         if enable_node:
             FILENAME = filename
->>>>>>> c345f3c ([WHAT] update new code)
             CONSOLE_LOG = console_log
             FORCED_EMPTY_CACHE = forced_empty_cache
             execution.execute = swizzle_execute
@@ -451,9 +372,6 @@ class ExecutionTime:
                     try: p.stop()
                     except: pass
             _PROMPTS.clear()
-<<<<<<< HEAD
-=======
         if input ==None:
             input=""
->>>>>>> c345f3c ([WHAT] update new code)
         return (input,)
